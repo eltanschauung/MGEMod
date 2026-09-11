@@ -615,18 +615,25 @@ public void OnClientPostAdminCheck(int client)
         g_bPlayerRestoringAmmo[client] = false;
         CreateTimer(15.0, Timer_WelcomePlayer, GetClientUserId(client));
 
-        if (!g_bNoStats)
-        {
-            char steamid_dirty[31], steamid[64], query[256];
-            GetClientAuthId(client, AuthId_Steam2, steamid_dirty, sizeof(steamid_dirty));
-            db.Escape(steamid_dirty, steamid, sizeof(steamid));
-            strcopy(g_sPlayerSteamID[client], 32, steamid);
-            Format(query, sizeof(query), "SELECT rating, hitblip, wins, losses FROM mgemod_stats WHERE steamid='%s' LIMIT 1", steamid);
-            db.Query(T_SQLQueryOnConnect, query, client);
-        }
+        MGE_LoadClientStats(client);
     }
 
     SDKHook(client, SDKHook_OnTakeDamage, OnTakeDamage);
+}
+
+static void MGE_LoadClientStats(int client)
+{
+    if (g_bNoStats || db == null || !IsValidClient(client) || IsFakeClient(client))
+        return;
+
+    char steamid_dirty[31], steamid[64], query[256];
+    if (!GetClientAuthId(client, AuthId_Steam2, steamid_dirty, sizeof(steamid_dirty)))
+        return;
+
+    db.Escape(steamid_dirty, steamid, sizeof(steamid));
+    strcopy(g_sPlayerSteamID[client], sizeof(g_sPlayerSteamID[]), steamid);
+    Format(query, sizeof(query), "SELECT rating, hitblip, wins, losses FROM mgemod_stats WHERE steamid='%s' LIMIT 1", steamid);
+    db.Query(T_SQLQueryOnConnect, query, client);
 }
 
 /* OnClientDisconnect(client)
@@ -3867,6 +3874,11 @@ void PrepareSQL() // Opens the connection to the database, and creates the table
         db.Query(SQLErrorCheckCallback, "CREATE TABLE IF NOT EXISTS mgemod_stats (rating INT(4) NOT NULL, steamid VARCHAR(32) NOT NULL, name VARCHAR(64) NOT NULL, wins INT(4) NOT NULL, losses INT(4) NOT NULL, lastplayed INT(11) NOT NULL, hitblip INT(2) NOT NULL) DEFAULT CHARACTER SET utf8 COLLATE utf8_unicode_ci ENGINE = InnoDB ");
         db.Query(SQLErrorCheckCallback, "CREATE TABLE IF NOT EXISTS mgemod_duels (winner VARCHAR(32) NOT NULL, loser VARCHAR(32) NOT NULL, winnerscore INT(4) NOT NULL, loserscore INT(4) NOT NULL, winlimit INT(4) NOT NULL, gametime INT(11) NOT NULL, mapname VARCHAR(64) NOT NULL, arenaname VARCHAR(32) NOT NULL) DEFAULT CHARACTER SET utf8 COLLATE utf8_unicode_ci ENGINE = InnoDB ");
         db.Query(SQLErrorCheckCallback, "CREATE TABLE IF NOT EXISTS mgemod_duels_2v2 (winner VARCHAR(32) NOT NULL, winner2 VARCHAR(32) NOT NULL, loser VARCHAR(32) NOT NULL, loser2 VARCHAR(32) NOT NULL, winnerscore INT(4) NOT NULL, loserscore INT(4) NOT NULL, winlimit INT(4) NOT NULL, gametime INT(11) NOT NULL, mapname VARCHAR(64) NOT NULL, arenaname VARCHAR(32) NOT NULL) DEFAULT CHARACTER SET utf8 COLLATE utf8_unicode_ci ENGINE = InnoDB ");
+    }
+
+    for (int client = 1; client <= MaxClients; client++)
+    {
+        MGE_LoadClientStats(client);
     }
 
 }
