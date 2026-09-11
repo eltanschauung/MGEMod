@@ -12,12 +12,14 @@
 #include <tf2_stocks>
 #include <sdkhooks>
 #include <morecolors>
+#include <points_store_api>
 // ====[ CONSTANTS ]===================================================
 #define PL_VERSION "3.0.9"
 #define MAXARENAS 63
 #define MAXSPAWNS 15
 #define HUDFADEOUTTIME 120.0
 #define MAPCONFIGFILE "configs/mgemod_spawns.cfg"
+#define MGE_WIN_REWARD_ID "mge_win"
 
 #pragma newdecls required
 
@@ -1123,6 +1125,7 @@ Action OnTouchHoop(int entity, int other)
 
         g_bPlayerHasIntel[client] = false;
         g_iArenaScore[arena_index][client_team_slot] += 1;
+        MGE_AwardRoundWinners(client, g_bFourPersonArena[arena_index] ? client_teammate : 0);
 
         if (fraglimit > 0 && g_iArenaScore[arena_index][client_team_slot] >= fraglimit && g_iArenaStatus[arena_index] >= AS_FIGHT && g_iArenaStatus[arena_index] < AS_REPORTED)
         {
@@ -3280,6 +3283,7 @@ Action Command_JoinClass(int client, int args)
                             {
 
                                 g_iArenaScore[arena_index][killer_team_slot] += 1;
+                                MGE_AwardRoundWinners(killer, g_bFourPersonArena[arena_index] ? killer_teammate : 0);
                                 MC_PrintToChat(killer, "%t", "ClassChangePointOpponent");
                                 MC_PrintToChat(client, "%t", "ClassChangePoint");
 
@@ -4204,7 +4208,10 @@ Action Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
     }
 
     if (!g_bArenaBBall[arena_index] && !g_bArenaKoth[arena_index] && (!g_bFourPersonArena[arena_index] || (g_bFourPersonArena[arena_index] && !IsPlayerAlive(victim_teammate)))) // Kills shouldn't give points in bball. Or if only 1 player in a two person arena dies
+    {
         g_iArenaScore[arena_index][killer_team_slot] += 1;
+        MGE_AwardRoundWinners(killer, g_bFourPersonArena[arena_index] ? killer_teammate : 0);
+    }
 
     if (!g_bArenaEndif[arena_index]) // Endif does not need to display health, since it is one-shot kills.
     {
@@ -5538,6 +5545,23 @@ bool IsValidClient(int iClient, bool bIgnoreKickQueue = false)
     return true;
 }
 
+void MGE_AwardRoundWinner(int client)
+{
+    if (!IsValidClient(client) || IsFakeClient(client))
+        return;
+
+    if (GetFeatureStatus(FeatureType_Native, "PointsStore_ApplyBonusPoints") == FeatureStatus_Available)
+        PointsStore_ApplyBonusPoints(client, MGE_WIN_REWARD_ID);
+}
+
+void MGE_AwardRoundWinners(int winner, int winnerTeammate = 0)
+{
+    MGE_AwardRoundWinner(winner);
+
+    if (winnerTeammate != winner)
+        MGE_AwardRoundWinner(winnerTeammate);
+}
+
 /* ShootsRocketsOrPipes()
  *
  * Does this player's gun shoot rockets or pipes?
@@ -5757,6 +5781,8 @@ void EndKoth(any arena_index, any winner_team)
         client_teammate = getTeammate(client_slot, arena_index);
         foe_teammate = getTeammate(foe_slot, arena_index);
     }
+
+    MGE_AwardRoundWinners(client, g_bFourPersonArena[arena_index] ? client_teammate : 0);
 
     if (fraglimit > 0 && g_iArenaScore[arena_index][winner_team] >= fraglimit && g_iArenaStatus[arena_index] >= AS_FIGHT && g_iArenaStatus[arena_index] < AS_REPORTED)
     {
