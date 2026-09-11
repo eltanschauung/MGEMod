@@ -1128,13 +1128,13 @@ Action OnTouchHoop(int entity, int other)
 
         g_bPlayerHasIntel[client] = false;
         g_iArenaScore[arena_index][client_team_slot] += 1;
-        MGE_HandleRoundResult(client, foe,
-            g_bFourPersonArena[arena_index] ? client_teammate : 0,
-            g_bFourPersonArena[arena_index] ? foe_teammate : 0);
 
         if (fraglimit > 0 && g_iArenaScore[arena_index][client_team_slot] >= fraglimit && g_iArenaStatus[arena_index] >= AS_FIGHT && g_iArenaStatus[arena_index] < AS_REPORTED)
         {
             g_iArenaStatus[arena_index] = AS_REPORTED;
+            MGE_HandleRoundResult(client, foe,
+                g_bFourPersonArena[arena_index] ? client_teammate : 0,
+                g_bFourPersonArena[arena_index] ? foe_teammate : 0);
             GetClientName(client, client_name, sizeof(client_name));
 
             if (g_bFourPersonArena[arena_index])
@@ -3288,9 +3288,6 @@ Action Command_JoinClass(int client, int args)
                             {
 
                                 g_iArenaScore[arena_index][killer_team_slot] += 1;
-                                MGE_HandleRoundResult(killer, client,
-                                    g_bFourPersonArena[arena_index] ? killer_teammate : 0,
-                                    g_bFourPersonArena[arena_index] ? client_teammate : 0);
                                 MC_PrintToChat(killer, "%t", "ClassChangePointOpponent");
                                 MC_PrintToChat(client, "%t", "ClassChangePoint");
 
@@ -3342,6 +3339,9 @@ Action Command_JoinClass(int client, int args)
                                 MC_PrintToChatAll("%t", "XdefeatsY", killer_name, g_iArenaScore[arena_index][killer_team_slot], victim_name, g_iArenaScore[arena_index][client_team_slot], fraglimit, g_sArenaName[arena_index]);
 
                                 g_iArenaStatus[arena_index] = AS_REPORTED;
+                                MGE_HandleRoundResult(killer, client,
+                                    g_bFourPersonArena[arena_index] ? killer_teammate : 0,
+                                    g_bFourPersonArena[arena_index] ? client_teammate : 0);
 
                                 if (!g_bNoStats && g_bFourPersonArena[arena_index]/* && !g_arenaNoStats[arena_index]*/)
                                     CalcELO2(killer, killer_teammate, client, client_teammate);
@@ -4217,9 +4217,6 @@ Action Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
     if (!g_bArenaBBall[arena_index] && !g_bArenaKoth[arena_index] && (!g_bFourPersonArena[arena_index] || (g_bFourPersonArena[arena_index] && !IsPlayerAlive(victim_teammate)))) // Kills shouldn't give points in bball. Or if only 1 player in a two person arena dies
     {
         g_iArenaScore[arena_index][killer_team_slot] += 1;
-        MGE_HandleRoundResult(killer, victim,
-            g_bFourPersonArena[arena_index] ? killer_teammate : 0,
-            g_bFourPersonArena[arena_index] ? victim_teammate : 0);
     }
 
     if (!g_bArenaEndif[arena_index]) // Endif does not need to display health, since it is one-shot kills.
@@ -4260,6 +4257,9 @@ Action Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
     if (g_iArenaStatus[arena_index] >= AS_FIGHT && g_iArenaStatus[arena_index] < AS_REPORTED && fraglimit > 0 && g_iArenaScore[arena_index][killer_team_slot] >= fraglimit)
     {
         g_iArenaStatus[arena_index] = AS_REPORTED;
+        MGE_HandleRoundResult(killer, victim,
+            g_bFourPersonArena[arena_index] ? killer_teammate : 0,
+            g_bFourPersonArena[arena_index] ? victim_teammate : 0);
         char killer_name[128];
         char victim_name[128];
         GetClientName(killer, killer_name, sizeof(killer_name));
@@ -5808,13 +5808,12 @@ void EndKoth(any arena_index, any winner_team)
         foe_teammate = getTeammate(foe_slot, arena_index);
     }
 
-    MGE_HandleRoundResult(client, foe,
-        g_bFourPersonArena[arena_index] ? client_teammate : 0,
-        g_bFourPersonArena[arena_index] ? foe_teammate : 0);
-
     if (fraglimit > 0 && g_iArenaScore[arena_index][winner_team] >= fraglimit && g_iArenaStatus[arena_index] >= AS_FIGHT && g_iArenaStatus[arena_index] < AS_REPORTED)
     {
         g_iArenaStatus[arena_index] = AS_REPORTED;
+        MGE_HandleRoundResult(client, foe,
+            g_bFourPersonArena[arena_index] ? client_teammate : 0,
+            g_bFourPersonArena[arena_index] ? foe_teammate : 0);
         char foe_name[MAX_NAME_LENGTH];
         GetClientName(foe, foe_name, sizeof(foe_name));
         char client_name[MAX_NAME_LENGTH];
