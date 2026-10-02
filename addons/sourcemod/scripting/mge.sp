@@ -506,7 +506,11 @@ public void OnMapStart()
 
         AddNormalSoundHook(sound_hook);
     } else {
-        SetFailState("Map not supported. MGEMod disabled.");
+        char pluginFile[PLATFORM_MAX_PATH];
+        GetPluginFilename(GetMyHandle(), pluginFile, sizeof(pluginFile));
+        LogMessage("Map not supported; unloading %s.", pluginFile);
+        ServerCommand("sm plugins unload \"%s\"", pluginFile);
+        return;
     }
 
     for (int i = 0; i < MAXPLAYERS; i++)
